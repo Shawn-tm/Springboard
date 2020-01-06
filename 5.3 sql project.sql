@@ -64,9 +64,10 @@ FROM Facilities'
 
 /* Q6: You'd like to get the first and last name of the last member(s)
 who signed up. Do not use the LIMIT clause for your solution. */
-'SELECT firstname, surname, joindate
+'SELECT firstname, surname
 FROM Members
-ORDER BY joindate DESC'
+WHERE joindate = (SELECT MAX(joindate)
+    FROM Members)'
 
 /* Q7: How can you produce a list of all members who have used a tennis court?
 Include in your output the name of the court, and the name of the member
@@ -110,31 +111,30 @@ END
 AND Bookings.starttime LIKE '2012-09-14%'
 ORDER BY total_cost DESC'
 
+'
+
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
-'SELECT Facilities.name AS facility_name, CONCAT( Members.firstname, ' ', Members.surname ) AS mem_name,
-CASE WHEN Bookings.memid =0
-THEN (
-Bookings.slots * Facilities.guestcost
-)
-ELSE (
-Bookings.slots * Facilities.membercost
-)
-END AS total_cost
+
+
+'WITH guest_total AS (SELECT Facilities.name AS facility_name, CONCAT( Members.firstname, ' ', Members.surname ) AS mem_name, Bookings.slots * Facilities.guestcost AS total_guestcost
 FROM Bookings
 INNER JOIN Facilities ON Bookings.facid = Facilities.facid
 INNER JOIN Members ON Bookings.memid = Members.memid
-WHERE (
-CASE WHEN Bookings.memid =0
-THEN (
-Bookings.slots * Facilities.guestcost
-)
-ELSE (
-Bookings.slots * Facilities.membercost
-)
-END
-) >30
-AND Bookings.starttime IN (SELECT starttime FROM Bookings WHERE starttime LIKE '2012-09-14%')
-ORDER BY total_cost DESC'
+WHERE Bookings.memid= 0
+    AND  Bookings.starttime LIKE '2012-09-14%'
+    AND  Bookings.slots * Facilities.guestcost > 30)
+
+mem_total AS(SELECT  Facilities.name AS facility_name, CONCAT( Members.firstname, ' ', Members.surname ) AS mem_name, Bookings.slots * Facilities.membercost AS total_memcost
+FROM Bookings
+INNER JOIN Facilities ON Bookings.facid = Facilities.facid
+INNER JOIN Members ON Bookings.memid = Members.memid
+WHERE Bookings.memid <> 0
+    AND Bookings.starttime LIKE '2012-09-14%'
+    AND Bookings.slots * Facilities.membercost> 30)
+
+SELECT * FROM guest_total, mem_total'
+
+
 
 /* Q10: Produce a list of facilities with a total revenue less than 1000.
 The output of facility name and total revenue, sorted by revenue. Remember
